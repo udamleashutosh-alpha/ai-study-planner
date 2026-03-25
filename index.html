@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Study Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Animation Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .phone {
+      width: 360px;
+      height: 640px;
+      background: #1e293b;
+      border-radius: 30px;
+      padding: 20px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.7);
+      overflow-y: auto;
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 10px;
+      border: none;
+    }
+
+    button {
+      width: 95%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: #22c55e;
+      color: white;
+      cursor: pointer;
+    }
+
+    #output {
+      margin-top: 10px;
+      background: #0f172a;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      background: #0f172a;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .progress {
+      height: 10px;
+      background: #22c55e;
+      width: 0%;
+      border-radius: 10px;
+    }
+
+    #app { display: none; }
+
+    h3 { margin-top: 15px; }
+  </style>
+</head>
+
+<body>
+
+<div class="phone">
+
+  <!-- LOGIN -->
+  <div id="login">
+    <h2>🔐 Login</h2>
+    <input type="text" id="username" placeholder="Enter your name">
+    <button onclick="login()">Enter</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app">
+
+    <h2 id="welcome"></h2>
+
+    <input type="number" id="hours" placeholder="Study hours">
+    <button onclick="animateButton(); generatePlan()">Generate Plan</button>
+
+    <div id="output"></div>
+
+    <h3>✅ Progress</h3>
+    <label><input type="checkbox" onchange="saveProgress()"> Math</label><br>
+    <label><input type="checkbox" onchange="saveProgress()"> Physics</label><br>
+    <label><input type="checkbox" onchange="saveProgress()"> Chemistry</label><br>
+
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <h3>🏆 Leaderboard</h3>
+    <div id="leaderboard"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+// LOGIN
+function login() {
+  let name = document.getElementById("username").value;
+  if (!name) return alert("Enter name!");
+
+  localStorage.setItem("user", name);
+  showApp(name);
+}
+
+function showApp(name) {
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("welcome").innerText = "Welcome, " + name;
+}
+
+// AI PLAN
+function generatePlan() {
+  let hours = document.getElementById("hours").value;
+  let user = localStorage.getItem("user");
+
+  if (!hours) return alert("Enter hours!");
+
+  let math = (hours * 0.4).toFixed(1);
+  let physics = (hours * 0.3).toFixed(1);
+  let chemistry = (hours * 0.3).toFixed(1);
+
+  let tips = [
+    "Revise formulas before sleep 📘",
+    "Practice PYQs daily 🎯",
+    "Take breaks every 1 hour ⏳",
+    "Focus on weak topics 🔍",
+    "Use active recall 🧠"
+  ];
+
+  let tip = tips[Math.floor(Math.random() * tips.length)];
+
+  let mode = hours < 3 ? "⚡ Low" : hours < 6 ? "🔥 Balanced" : "🚀 High";
+
+  let plan = `
+    📅 Plan:<br>
+    Math: ${math} hrs<br>
+    Physics: ${physics} hrs<br>
+    Chemistry: ${chemistry} hrs<br><br>
+    💡 ${tip}<br>
+    📊 ${mode}
+  `;
+
+  document.getElementById("output").innerHTML = plan;
+
+  // Animation
+  anime({
+    targets: '#output',
+    opacity: [0, 1],
+    translateY: [20, 0],
+    duration: 800
+  });
+
+  // Save to leaderboard
+  saveScore(user, hours);
+}
+
+// BUTTON ANIMATION
+function animateButton() {
+  anime({
+    targets: 'button',
+    scale: [1, 1.1, 1],
+    duration: 400
+  });
+}
+
+// PROGRESS
+function saveProgress() {
+  let checks = document.querySelectorAll("input[type=checkbox]");
+  let done = 0;
+  let data = [];
+
+  checks.forEach((c, i) => {
+    if (c.checked) done++;
+    data[i] = c.checked;
+  });
+
+  localStorage.setItem("progress", JSON.stringify(data));
+
+  let percent = (done / checks.length) * 100;
+
+  anime({
+    targets: '#progress',
+    width: percent + '%',
+    duration: 800
+  });
+}
+
+// LEADERBOARD (LOCAL)
+function saveScore(name, hours) {
+  let scores = JSON.parse(localStorage.getItem("scores")) || [];
+  scores.push({ name, hours });
+  localStorage.setItem("scores", JSON.stringify(scores));
+  loadLeaderboard();
+}
+
+function loadLeaderboard() {
+  let scores = JSON.parse(localStorage.getItem("scores")) || [];
+  scores.sort((a, b) => b.hours - a.hours);
+
+  let html = "";
+  scores.slice(0,5).forEach(s => {
+    html += `${s.name}: ${s.hours} hrs<br>`;
+  });
+
+  document.getElementById("leaderboard").innerHTML = html;
+}
+
+// LOAD
+window.onload = function() {
+  let user = localStorage.getItem("user");
+  if (user) showApp(user);
+
+  let saved = JSON.parse(localStorage.getItem("progress"));
+  if (saved) {
+    let checks = document.querySelectorAll("input[type=checkbox]");
+    let done = 0;
+
+    checks.forEach((c, i) => {
+      c.checked = saved[i];
+      if (c.checked) done++;
+    });
+
+    let percent = (done / checks.length) * 100;
+    document.getElementById("progress").style.width = percent + "%";
+  }
+
+  loadLeaderboard();
+}
+
+</script>
+
+</body>
+</html>
